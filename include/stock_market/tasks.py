@@ -17,20 +17,20 @@ def _get_stock_prices(symbol: str):
     return json.dumps(result)
 
 
-def _store_stock_prices(stock: dict):
+def _store_stock_prices(stock: str):
     """Store stock prices in the Minio bucket."""
     minio = BaseHook.get_connection('minio')
-
     client = Minio(
         endpoint=minio.extra_dejson["endpoint"].split("//")[1],
-        access_key=minio.extra_dejson["aws_access_key_id"],
-        secret_key=minio.extra_dejson["aws_access_secret_key"],
+        access_key=minio.login,
+        secret_key=minio.password,
         secure=False
     )
     bucket_name = "stock-market"
     if not client.bucket_exists(bucket_name):
         client.make_bucket(bucket_name)
 
+    stock = json.loads(stock)
     symbol = stock["meta"]["symbol"]
     data = json.dumps(stock, ensure_ascii=False).encode('utf-8')
     # Store the data in the database

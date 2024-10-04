@@ -55,6 +55,11 @@ List all Airflow commands
 airflow cheat-sheet
 ```
 
+Check dependencies installation in Docker
+```
+pip freeze | grep minio
+```
+
 ### Related to the Meta Database
 
 Check if the metadata database can be reached
