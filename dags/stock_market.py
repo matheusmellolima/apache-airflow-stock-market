@@ -6,11 +6,12 @@ from airflow.decorators import dag, task
 from airflow.hooks.base import BaseHook
 from airflow.sensors.base import PokeReturnValue
 from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
 
 from include.stock_market.tasks import _get_stock_prices, _store_stock_prices
 
 
-SYMBOL = "APPL"
+SYMBOL = "NVDA"  # Nvidia stock symbol
 
 
 @dag(
@@ -62,8 +63,24 @@ def stock_market():  # This will be the DAG ID in Airflow
             'stock': '{{ task_instance.xcom_pull(task_ids="get_stock_prices") }}'},
     )
 
+    stock_prices_transform = DockerOperator(
+        task_id="stock_prices_transform",
+        image="airflow/spark-stock-transform-app",
+        container_name="stock_prices_transform",
+        api_version="auto",
+        auto_remove=True,
+        docker_url="tcp://docker-proxy:2375",
+        network_mode="container:spark-master",
+        tty=True,
+        xcom_all=False,
+        mount_tmp_dir=False,
+        environment={
+            "SPARK_STOCK_PRICES_FILE_LOCATION": "{{ task_instance.xcom_pull(task_ids='store_stock_prices') }}",
+        }
+    )
+
     # Define the task dependencies and execution order
-    is_api_available() >> get_stock_prices >> store_stock_prices
+    is_api_available() >> get_stock_prices >> store_stock_prices >> stock_prices_transform
 
 
 stock_market()  # This will register the DAG in Airflow
